@@ -16,7 +16,7 @@ int csqlite3_bind_int(sqlite3_stmt **stmt, int col, int val) {
 }
 
 int csqlite3_bind_text(sqlite3_stmt **stmt, int col, char *string, int nByte) {
-  return sqlite3_bind_text(*stmt, col, string, nByte, NULL);
+  return sqlite3_bind_text(*stmt, col, string, nByte, SQLITE_TRANSIENT);
 }
 
 int csqlite3_close(sqlite3 **db) { return sqlite3_close(*db); }
