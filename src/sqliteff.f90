@@ -1,7 +1,7 @@
 module sqliteff
 !   USE csqlite3
 !   USE sqlite3
-    use iso_c_binding, only: c_char, c_int, c_ptr
+    use iso_c_binding, only: c_char, c_int, c_double, c_ptr
     use iso_varying_string, only: VARYING_STRING, assignment(=)
 
     implicit none
@@ -24,6 +24,9 @@ module sqliteff
     integer, parameter, public :: SQLITE_DONE = 101
 
     public :: &
+            sqliteff_bind_double, &
+            sqliteff_bind_int, &
+            sqliteff_bind_text, &
             sqliteff_close, &
             sqliteff_exec, &
             sqliteff_finalize, &
@@ -31,6 +34,80 @@ module sqliteff
             sqliteff_prepare, &
             sqliteff_step
 contains
+    function sqliteff_bind_double(statement, col, val) result(status)
+        type(SqliteStatement_t), intent(inout) :: statement
+        integer, intent(in) :: col
+        double precision, intent(in) :: val
+        integer :: status
+
+        interface
+            function csqlite3_bind_double( &
+                    handle, &
+                    col, &
+                    val) &
+                    result(status) &
+                    bind(C, name = "csqlite3_bind_double")
+                import c_double, c_int, c_ptr
+                type(c_ptr), intent(inout) :: handle
+                integer(kind=c_int), value, intent(in) :: col
+                real(kind=c_double), value, intent(in) :: val
+                integer(kind=c_int) :: status
+            end function csqlite3_bind_double
+        end interface
+
+        status = csqlite3_bind_double(statement%handle, col, val)
+    end function sqliteff_bind_double
+
+    function sqliteff_bind_int(statement, col, val) result(status)
+        type(SqliteStatement_t), intent(inout) :: statement
+        integer, intent(in) :: col
+        integer, intent(in) :: val
+        integer :: status
+
+        interface
+            function csqlite3_bind_int( &
+                    handle, &
+                    col, &
+                    val) &
+                    result(status) &
+                    bind(C, name = "csqlite3_bind_int")
+                import c_int, c_ptr
+                type(c_ptr), intent(inout) :: handle
+                integer(kind=c_int), value, intent(in) :: col
+                integer(kind=c_int), value, intent(in) :: val
+                integer(kind=c_int) :: status
+            end function csqlite3_bind_int
+        end interface
+
+        status = csqlite3_bind_int(statement%handle, col, val)
+    end function sqliteff_bind_int
+
+    function sqliteff_bind_text(statement, col, val) result(status)
+        type(SqliteStatement_t), intent(inout) :: statement
+        integer, intent(in) :: col
+        character(len=*), intent(in) :: val
+        integer :: status
+
+        interface
+            function csqlite3_bind_text( &
+                    handle, &
+                    col, &
+                    val, &
+                    nByte) &
+                    result(status) &
+                    bind(C, name = "csqlite3_bind_text")
+                import c_char, c_int, c_ptr
+                type(c_ptr), intent(inout) :: handle
+                integer(kind=c_int), value, intent(in) :: col
+                character(len=1, kind=c_char), dimension(*), intent(in) :: val
+                integer(kind=c_int), value, intent(in) :: nByte
+                integer(kind=c_int) :: status
+            end function csqlite3_bind_text
+        end interface
+
+        status = csqlite3_bind_text(statement%handle, col, fStringToC(val), len(val) + 1)
+    end function sqliteff_bind_text
+
     function sqliteff_close(connection) result(status)
         type(SqliteDatabase_t), intent(inout) :: connection
         integer :: status

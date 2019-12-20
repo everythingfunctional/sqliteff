@@ -3,6 +3,9 @@ module sqliteff_test
     use sqliteff, only: &
             SqliteDatabase_t, &
             SqliteStatement_t, &
+            sqliteff_bind_double, &
+            sqliteff_bind_int, &
+            sqliteff_bind_text, &
             sqliteff_close, &
             sqliteff_exec, &
             sqliteff_finalize, &
@@ -21,7 +24,7 @@ contains
     function test_sqliteff() result(tests)
         type(TestItem_t) :: tests
 
-        type(TestItem_t) :: individual_tests(3)
+        type(TestItem_t) :: individual_tests(4)
 
         individual_tests(1) = it( &
                 "can open and close a database connection", checkOpenAndClose)
@@ -30,6 +33,8 @@ contains
         individual_tests(3) = it( &
                 "can manually prepare, step and finalize a statement", &
                 checkManualExec)
+        individual_tests(4) = it( &
+                "can use bind to insert values", checkInsertWithBind)
         tests = describe("sqliteff", individual_tests)
     end function test_sqliteff
 
@@ -58,16 +63,12 @@ contains
 
         status = sqliteff_open(":memory:", connection)
 
-        result_ = assertEquals(SQLITE_OK, status, "opened")
-
-        if (result_%passed()) then
-            status = sqliteff_exec( &
-                    connection, &
-                    "CREATE TABLE example ( identifier INTEGER PRIMARY KEY ASC, dummy TEXT) ;", &
-                    errmsg)
-            result_ = assertEquals(SQLITE_OK, status, errmsg)
-            status = sqliteff_close(connection)
-        end if
+        status = sqliteff_exec( &
+                connection, &
+                "CREATE TABLE example ( identifier INTEGER PRIMARY KEY ASC, dummy TEXT) ;", &
+                errmsg)
+        result_ = assertEquals(SQLITE_OK, status, errmsg)
+        status = sqliteff_close(connection)
     end function checkExec
 
     function checkManualExec() result(result_)
@@ -79,20 +80,58 @@ contains
         integer :: status
 
         status = sqliteff_open(":memory:", connection)
-        result_ = assertEquals(SQLITE_OK, status, "opened")
+
+        status = sqliteff_prepare( &
+                connection, &
+                "CREATE TABLE example ( identifier INTEGER PRIMARY KEY ASC, dummy TEXT) ;", &
+                statement, &
+                remaining)
+        result_ = assertEquals(SQLITE_OK, status, "prepared")
         if (result_%passed()) then
-            status = sqliteff_prepare( &
-                    connection, &
-                    "CREATE TABLE example ( identifier INTEGER PRIMARY KEY ASC, dummy TEXT) ;", &
-                    statement, &
-                    remaining)
-            result_ = assertEquals(SQLITE_OK, status, "prepared")
-            if (result_%passed()) then
-                status = sqliteff_step(statement)
-                result_ = assertEquals(SQLITE_DONE, status, "stepped")
-                status = sqliteff_finalize(statement)
-                status = sqliteff_close(connection)
-            end if
+            status = sqliteff_step(statement)
+            result_ = assertEquals(SQLITE_DONE, status, "stepped")
+            status = sqliteff_finalize(statement)
+            status = sqliteff_close(connection)
         end if
     end function checkManualExec
+
+    function checkInsertWithBind() result(result_)
+        type(Result_t) :: result_
+
+        type(SqliteDatabase_t) :: connection
+        type(VARYING_STRING) :: errmsg
+        type(VARYING_STRING) :: remaining
+        type(SqliteStatement_t) :: statement
+        integer :: status
+
+        status = sqliteff_open(":memory:", connection)
+        status = sqliteff_exec( &
+                connection, &
+                "CREATE TABLE example (the_integer INTEGER, the_double REAL, the_text TEXT);", &
+                errmsg)
+        status = sqliteff_prepare( &
+                connection, &
+                "INSERT INTO example (the_integer, the_double, the_text) VALUES (?, ?, ?);", &
+                statement, &
+                remaining)
+        result_ = assertEquals(SQLITE_OK, status, "prepare")
+        if (result_%passed()) then
+            status = sqliteff_bind_int(statement, 1, 2)
+            result_ = assertEquals(SQLITE_OK, status, "bind_int")
+            if (result_%passed()) then
+                status = sqliteff_bind_double(statement, 2, 3.0d0)
+                result_ = assertEquals(SQLITE_OK, status, "bind_double")
+                if (result_%passed()) then
+                    status = sqliteff_bind_text(statement, 3, "something")
+                    result_ = assertEquals(SQLITE_OK, status, "bind_text")
+                    if (result_%passed()) then
+                        status = sqliteff_step(statement)
+                        result_ = assertEquals(SQLITE_DONE, status, "step")
+                        status = sqliteff_finalize(statement)
+                        status = sqliteff_close(connection)
+                    end if
+                end if
+            end if
+        end if
+    end function checkInsertWithBind
 end module sqliteff_test
