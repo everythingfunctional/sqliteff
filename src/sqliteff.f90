@@ -12,11 +12,24 @@ module sqliteff
         type(c_ptr) :: handle
     end type SqliteDatabase_t
 
+    type, public :: SqliteStatement_t
+        private
+        type(c_ptr) :: handle
+    end type SqliteStatement_t
+
     integer, parameter, public :: SQLITE_OK = 0
     integer, parameter, public :: SQLITE_ERROR = 1
     integer, parameter, public :: SQLITE_MISUSE = 21
+    integer, parameter, public :: SQLITE_ROW = 100
+    integer, parameter, public :: SQLITE_DONE = 101
 
-    public :: sqliteff_close, sqliteff_exec, sqliteff_open
+    public :: &
+            sqliteff_close, &
+            sqliteff_exec, &
+            sqliteff_finalize, &
+            sqliteff_open, &
+            sqliteff_prepare, &
+            sqliteff_step
 contains
     function sqliteff_close(connection) result(status)
         type(SqliteDatabase_t), intent(inout) :: connection
@@ -45,14 +58,14 @@ contains
                     handle, &
                     command, &
                     errmsg, &
-                    maxlen) &
+                    max_len) &
                     result(status) &
                     bind(C, name = "csqlite3_exec")
                 import c_char, c_int, c_ptr
                 type(c_ptr), intent(inout) :: handle
                 character(len=1, kind=c_char), dimension(*), intent(in) :: command
                 character(len=1, kind=c_char), dimension(*) :: errmsg
-                integer(kind=c_int), value, intent(in) :: maxlen
+                integer(kind=c_int), value, intent(in) :: max_len
                 integer(kind=c_int) :: status
             end function csqlite3_exec
         end interface
@@ -63,6 +76,22 @@ contains
         status = csqlite3_exec(connection%handle, fStringToC(command), message, MAX_MESSAGE_LENGTH)
         errmsg = cStringToF(message)
     end function sqliteff_exec
+
+    function sqliteff_finalize(statement) result(status)
+        type(SqliteStatement_t), intent(inout) :: statement
+        integer :: status
+
+        interface
+            function csqlite3_finalize( &
+                    statement) result(status) bind(C, name = "csqlite3_finalize")
+                import c_int, c_ptr
+                type(c_ptr), intent(inout) :: statement
+                integer(kind=c_int) :: status
+            end function csqlite3_finalize
+        end interface
+
+        status = csqlite3_finalize(statement%handle)
+    end function sqliteff_finalize
 
     function sqliteff_open(filename, connection) result(status)
         character(len=*), intent(in) :: filename
@@ -84,6 +113,57 @@ contains
 
         status = csqlite3_open(fStringToC(filename), connection%handle)
     end function sqliteff_open
+
+    function sqliteff_prepare(connection, sql, statement, remaining) result(status)
+        type(SqliteDatabase_t), intent(inout) :: connection
+        character(len=*), intent(in) :: sql
+        type(SqliteStatement_t), intent(out) :: statement
+        type(VARYING_STRING), intent(out) :: remaining
+        integer :: status
+
+        interface
+            function csqlite3_prepare( &
+                    db, &
+                    zSql, &
+                    nByte, &
+                    ppStmt, &
+                    pzTail, &
+                    max_len) &
+                    result(status) &
+                    bind(C, name = "csqlite3_prepare")
+                import c_char, c_int, c_ptr
+                type(c_ptr), intent(inout) :: db
+                character(len=1, kind=c_char), dimension(*), intent(in) :: zSql
+                integer(kind=c_int), value, intent(in) :: nByte
+                type(c_ptr), intent(out) :: ppStmt
+                character(len=1, kind=c_char), dimension(*) :: pzTail
+                integer(kind=c_int), value, intent(in) :: max_len
+                integer(kind=c_int) :: status
+            end function csqlite3_prepare
+        end interface
+
+        integer, parameter :: MAX_REMAINING_LENGTH = 1000
+        character(len=MAX_REMAINING_LENGTH, kind=c_char) :: pzTail
+
+        status = csqlite3_prepare(connection%handle, fStringToC(sql), len(sql) + 1, statement%handle, pzTail, MAX_REMAINING_LENGTH)
+        remaining = cStringToF(pzTail)
+    end function sqliteff_prepare
+
+    function sqliteff_step(statement) result(status)
+        type(SqliteStatement_t), intent(inout) :: statement
+        integer :: status
+
+        interface
+            function csqlite3_step( &
+                    statement) result(status) bind(C, name = "csqlite3_step")
+                import c_int, c_ptr
+                type(c_ptr), intent(inout) :: statement
+                integer(kind=c_int) :: status
+            end function csqlite3_step
+        end interface
+
+        status = csqlite3_step(statement%handle)
+    end function sqliteff_step
 
     pure function fStringToC(f_string) result(c_string)
         character(len=*), intent(in) :: f_string
