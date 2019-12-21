@@ -28,6 +28,9 @@ module sqliteff
             sqliteff_bind_int, &
             sqliteff_bind_text, &
             sqliteff_close, &
+            sqliteff_column_double, &
+            sqliteff_column_int, &
+            sqliteff_column_text, &
             sqliteff_exec, &
             sqliteff_finalize, &
             sqliteff_open, &
@@ -123,6 +126,75 @@ contains
 
         status = csqlite3_close(connection%handle)
     end function sqliteff_close
+
+    function sqliteff_column_double(statement, col) result(val)
+        type(SqliteStatement_t), intent(inout) :: statement
+        integer, intent(in) :: col
+        double precision :: val
+
+        interface
+            function csqlite3_column_double( &
+                    handle, &
+                    col) &
+                    result(val) &
+                    bind(C, name = "csqlite3_column_double")
+                import c_double, c_int, c_ptr
+                type(c_ptr), intent(inout) :: handle
+                integer(kind=c_int), value, intent(in) :: col
+                real(kind=c_double) :: val
+            end function csqlite3_column_double
+        end interface
+
+        val = csqlite3_column_double(statement%handle, col)
+    end function sqliteff_column_double
+
+    function sqliteff_column_int(statement, col) result(val)
+        type(SqliteStatement_t), intent(inout) :: statement
+        integer, intent(in) :: col
+        integer :: val
+
+        interface
+            function csqlite3_column_int( &
+                    handle, &
+                    col) &
+                    result(val) &
+                    bind(C, name = "csqlite3_column_int")
+                import c_int, c_ptr
+                type(c_ptr), intent(inout) :: handle
+                integer(kind=c_int), value, intent(in) :: col
+                integer(kind=c_int) :: val
+            end function csqlite3_column_int
+        end interface
+
+        val = csqlite3_column_int(statement%handle, col)
+    end function sqliteff_column_int
+
+    function sqliteff_column_text(statement, col) result(val)
+        type(SqliteStatement_t), intent(inout) :: statement
+        integer, intent(in) :: col
+        type(VARYING_STRING) :: val
+
+        interface
+            subroutine csqlite3_column_text( &
+                    handle, &
+                    col, &
+                    text, &
+                    max_len) &
+                    bind(C, name = "csqlite3_column_text")
+                import c_char, c_int, c_ptr
+                type(c_ptr), intent(inout) :: handle
+                integer(kind=c_int), value, intent(in) :: col
+                character(len=1, kind=c_char), dimension(*) :: text
+                integer(kind=c_int), value, intent(in) :: max_len
+            end subroutine csqlite3_column_text
+        end interface
+
+        integer, parameter :: MAX_STRING_LENGTH = 1000
+        character(len=MAX_STRING_LENGTH, kind=c_char) :: text
+
+        call csqlite3_column_text(statement%handle, col, text, MAX_STRING_LENGTH)
+        val = cStringToF(text)
+    end function sqliteff_column_text
 
     function sqliteff_exec(connection, command, errmsg) result(status)
         type(SqliteDatabase_t), intent(inout) :: connection
@@ -259,7 +331,7 @@ contains
         if (terminator_position == 0) then
             f_string = c_string
         else
-            f_string = c_string(1:terminator_position)
+            f_string = c_string(1:terminator_position - 1)
         end if
     end function cStringToF
 end module sqliteff

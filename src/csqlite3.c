@@ -21,6 +21,21 @@ int csqlite3_bind_text(sqlite3_stmt **stmt, int col, char *string, int nByte) {
 
 int csqlite3_close(sqlite3 **db) { return sqlite3_close(*db); }
 
+double csqlite3_column_double(sqlite3_stmt **stmt, int col) {
+  return sqlite3_column_double(*stmt, col);
+}
+
+int csqlite3_column_int(sqlite3_stmt **stmt, int col) {
+  return sqlite3_column_int(*stmt, col);
+}
+
+void csqlite3_column_text(sqlite3_stmt **stmt, int col, char *text,
+                          int max_len) {
+  const char *string;
+  string = sqlite3_column_text(*stmt, col);
+  strncpy(text, string, max_len);
+}
+
 int csqlite3_exec(sqlite3 **db, char *command, char *errmsg, int max_len) {
   char *message;
   int status;
