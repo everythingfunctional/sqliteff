@@ -27,6 +27,10 @@ int csqlite3_clear_bindings(sqlite3_stmt **stmt) {
 
 int csqlite3_close(sqlite3 **db) { return sqlite3_close(*db); }
 
+int csqlite3_column_count(sqlite3_stmt **stmt) {
+  return sqlite3_column_count(*stmt);
+}
+
 double csqlite3_column_double(sqlite3_stmt **stmt, int col) {
   return sqlite3_column_double(*stmt, col);
 }

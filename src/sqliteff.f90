@@ -28,6 +28,7 @@ module sqliteff
             sqliteff_bind_text, &
             sqliteff_clear_bindings, &
             sqliteff_close, &
+            sqliteff_column_count, &
             sqliteff_column_double, &
             sqliteff_column_int, &
             sqliteff_column_text, &
@@ -145,6 +146,24 @@ contains
 
         status = csqlite3_close(connection%handle)
     end function sqliteff_close
+
+    function sqliteff_column_count(statement) result(num_columns)
+        type(SqliteStatement_t), intent(inout) :: statement
+        integer :: num_columns
+
+        interface
+            function csqlite3_column_count( &
+                    handle) &
+                    result(num_columns) &
+                    bind(C, name = "csqlite3_column_count")
+                import c_int, c_ptr
+                type(c_ptr), intent(inout) :: handle
+                integer(kind=c_int) :: num_columns
+            end function csqlite3_column_count
+        end interface
+
+        num_columns = csqlite3_column_count(statement%handle)
+    end function sqliteff_column_count
 
     function sqliteff_column_double(statement, col) result(val)
         type(SqliteStatement_t), intent(inout) :: statement

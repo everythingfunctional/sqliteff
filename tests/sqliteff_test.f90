@@ -8,6 +8,7 @@ module sqliteff_test
             sqliteff_bind_text, &
             sqliteff_clear_bindings, &
             sqliteff_close, &
+            sqliteff_column_count, &
             sqliteff_column_double, &
             sqliteff_column_int, &
             sqliteff_column_text, &
@@ -30,7 +31,7 @@ contains
     function test_sqliteff() result(tests)
         type(TestItem_t) :: tests
 
-        type(TestItem_t) :: individual_tests(7)
+        type(TestItem_t) :: individual_tests(8)
 
         individual_tests(1) = it( &
                 "can open and close a database connection", checkOpenAndClose)
@@ -47,6 +48,8 @@ contains
                 "can reset a statement", checkReset)
         individual_tests(7) = it( &
                 "can clear the bindings from a statement", checkClearBindings)
+        individual_tests(8) = it( &
+                "can tell how many columns in a result", checkColumnCount)
         tests = describe("sqliteff", individual_tests)
     end function test_sqliteff
 
@@ -261,4 +264,36 @@ contains
             end if
         end if
     end function checkClearBindings
+
+    function checkColumnCount() result(result_)
+        type(Result_t) :: result_
+
+        type(SqliteDatabase_t) :: connection
+        type(VARYING_STRING) :: errmsg
+        type(VARYING_STRING) :: remaining
+        type(SqliteStatement_t) :: statement
+        integer :: status
+
+        status = sqliteff_open(":memory:", connection)
+        status = sqliteff_exec( &
+                connection, &
+                "CREATE TABLE example (the_integer INTEGER, the_double REAL, the_text TEXT);", &
+                errmsg)
+        status = sqliteff_exec( &
+                connection, &
+                'INSERT INTO example (the_integer, the_double, the_text) VALUES (2, 3.0, "Hello");', &
+                errmsg)
+        status = sqliteff_prepare( &
+                connection, &
+                "SELECT the_integer, the_double, the_text FROM example;", &
+                statement, &
+                remaining)
+        status = sqliteff_step(statement)
+        result_ = assertEquals(SQLITE_ROW, status, "step")
+        if (result_%passed()) then
+            result_ = assertEquals(3, sqliteff_column_count(statement))
+            status = sqliteff_finalize(statement)
+            status = sqliteff_close(connection)
+        end if
+    end function checkColumnCount
 end module sqliteff_test
