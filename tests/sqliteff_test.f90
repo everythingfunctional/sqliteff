@@ -1,5 +1,5 @@
 module sqliteff_test
-    use iso_varying_string, only: VARYING_STRING
+    use iso_varying_string, only: VARYING_STRING, var_str
     use sqliteff, only: &
             SqliteDatabase_t, &
             SqliteStatement_t, &
@@ -62,7 +62,7 @@ contains
         type(SqliteDatabase_t) :: connection
         integer :: status
 
-        status = sqliteff_open(":memory:", connection)
+        status = sqliteff_open(var_str(":memory:"), connection)
 
         result_ = assertEquals(SQLITE_OK, status, "opened")
 
@@ -83,7 +83,7 @@ contains
 
         status = sqliteff_exec( &
                 connection, &
-                "CREATE TABLE example ( identifier INTEGER PRIMARY KEY ASC, dummy TEXT) ;", &
+                var_str("CREATE TABLE example (identifier INTEGER PRIMARY KEY ASC, dummy TEXT);"), &
                 errmsg)
         result_ = assertEquals(SQLITE_OK, status, errmsg)
         status = sqliteff_close(connection)
@@ -101,7 +101,7 @@ contains
 
         status = sqliteff_prepare( &
                 connection, &
-                "CREATE TABLE example ( identifier INTEGER PRIMARY KEY ASC, dummy TEXT) ;", &
+                var_str("CREATE TABLE example (identifier INTEGER PRIMARY KEY ASC, dummy TEXT);"), &
                 statement, &
                 remaining)
         result_ = assertEquals(SQLITE_OK, status, "prepared")
@@ -140,7 +140,7 @@ contains
                 status = sqliteff_bind_double(statement, 2, 3.0d0)
                 result_ = assertEquals(SQLITE_OK, status, "bind_double")
                 if (result_%passed()) then
-                    status = sqliteff_bind_text(statement, 3, "something")
+                    status = sqliteff_bind_text(statement, 3, var_str("something"))
                     result_ = assertEquals(SQLITE_OK, status, "bind_text")
                     if (result_%passed()) then
                         status = sqliteff_step(statement)

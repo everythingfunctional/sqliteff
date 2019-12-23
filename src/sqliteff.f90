@@ -1,7 +1,7 @@
 module sqliteff
 !   USE csqlite3
     use iso_c_binding, only: c_char, c_int, c_double, c_ptr
-    use iso_varying_string, only: VARYING_STRING, assignment(=)
+    use iso_varying_string, only: VARYING_STRING, assignment(=), char
 
     implicit none
     private
@@ -15,6 +15,26 @@ module sqliteff
         private
         type(c_ptr) :: handle
     end type SqliteStatement_t
+
+    interface sqliteff_bind_text
+        module procedure sqliteff_bind_textC
+        module procedure sqliteff_bind_textS
+    end interface sqliteff_bind_text
+
+    interface sqliteff_exec
+        module procedure sqliteff_execC
+        module procedure sqliteff_execS
+    end interface sqliteff_exec
+
+    interface sqliteff_open
+        module procedure sqliteff_openC
+        module procedure sqliteff_openS
+    end interface sqliteff_open
+
+    interface sqliteff_prepare
+        module procedure sqliteff_prepareC
+        module procedure sqliteff_prepareS
+    end interface sqliteff_prepare
 
     integer, parameter, public :: SQLITE_OK = 0
     integer, parameter, public :: SQLITE_ERROR = 1
@@ -88,7 +108,7 @@ contains
         status = csqlite3_bind_int(statement%handle, col, val)
     end function sqliteff_bind_int
 
-    function sqliteff_bind_text(statement, col, val) result(status)
+    function sqliteff_bind_textC(statement, col, val) result(status)
         type(SqliteStatement_t), intent(inout) :: statement
         integer, intent(in) :: col
         character(len=*), intent(in) :: val
@@ -112,7 +132,16 @@ contains
         end interface
 
         status = csqlite3_bind_text(statement%handle, col, fStringToC(val), len(val) + 1)
-    end function sqliteff_bind_text
+    end function sqliteff_bind_textC
+
+    function sqliteff_bind_textS(statement, col, val) result(status)
+        type(SqliteStatement_t), intent(inout) :: statement
+        integer, intent(in) :: col
+        type(VARYING_STRING), intent(in) :: val
+        integer :: status
+
+        status = sqliteff_bind_text(statement, col, char(val))
+    end function sqliteff_bind_textS
 
     function sqliteff_clear_bindings(statement) result(status)
         type(SqliteStatement_t), intent(inout) :: statement
@@ -235,7 +264,7 @@ contains
         val = cStringToF(text)
     end function sqliteff_column_text
 
-    function sqliteff_exec(connection, command, errmsg) result(status)
+    function sqliteff_execC(connection, command, errmsg) result(status)
         type(SqliteDatabase_t), intent(inout) :: connection
         character(len=*), intent(in) :: command
         type(VARYING_STRING), intent(out) :: errmsg
@@ -263,7 +292,16 @@ contains
 
         status = csqlite3_exec(connection%handle, fStringToC(command), message, MAX_MESSAGE_LENGTH)
         errmsg = cStringToF(message)
-    end function sqliteff_exec
+    end function sqliteff_execC
+
+    function sqliteff_execS(connection, command, errmsg) result(status)
+        type(SqliteDatabase_t), intent(inout) :: connection
+        type(VARYING_STRING), intent(in) :: command
+        type(VARYING_STRING), intent(out) :: errmsg
+        integer :: status
+
+        status = sqliteff_exec(connection, char(command), errmsg)
+    end function sqliteff_execS
 
     function sqliteff_finalize(statement) result(status)
         type(SqliteStatement_t), intent(inout) :: statement
@@ -296,7 +334,7 @@ contains
         row_id = csqlite3_last_insert_rowid(connection%handle)
     end function sqliteff_last_insert_rowid
 
-    function sqliteff_open(filename, connection) result(status)
+    function sqliteff_openC(filename, connection) result(status)
         character(len=*), intent(in) :: filename
         type(SqliteDatabase_t), intent(out) :: connection
         integer :: status
@@ -315,9 +353,17 @@ contains
         end interface
 
         status = csqlite3_open(fStringToC(filename), connection%handle)
-    end function sqliteff_open
+    end function sqliteff_openC
 
-    function sqliteff_prepare(connection, sql, statement, remaining) result(status)
+    function sqliteff_openS(filename, connection) result(status)
+        type(VARYING_STRING), intent(in) :: filename
+        type(SqliteDatabase_t), intent(out) :: connection
+        integer :: status
+
+        status = sqliteff_open(char(filename), connection)
+    end function sqliteff_openS
+
+    function sqliteff_prepareC(connection, sql, statement, remaining) result(status)
         type(SqliteDatabase_t), intent(inout) :: connection
         character(len=*), intent(in) :: sql
         type(SqliteStatement_t), intent(out) :: statement
@@ -350,7 +396,17 @@ contains
 
         status = csqlite3_prepare(connection%handle, fStringToC(sql), len(sql) + 1, statement%handle, pzTail, MAX_REMAINING_LENGTH)
         remaining = cStringToF(pzTail)
-    end function sqliteff_prepare
+    end function sqliteff_prepareC
+
+    function sqliteff_prepareS(connection, sql, statement, remaining) result(status)
+        type(SqliteDatabase_t), intent(inout) :: connection
+        type(VARYING_STRING), intent(in) :: sql
+        type(SqliteStatement_t), intent(out) :: statement
+        type(VARYING_STRING), intent(out) :: remaining
+        integer :: status
+
+        status = sqliteff_prepare(connection, char(sql), statement, remaining)
+    end function sqliteff_prepareS
 
     function sqliteff_reset(statement) result(status)
         type(SqliteStatement_t), intent(inout) :: statement
