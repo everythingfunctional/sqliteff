@@ -1,6 +1,5 @@
 module sqliteff
 !   USE csqlite3
-!   USE sqlite3
     use iso_c_binding, only: c_char, c_int, c_double, c_ptr
     use iso_varying_string, only: VARYING_STRING, assignment(=)
 
@@ -27,6 +26,7 @@ module sqliteff
             sqliteff_bind_double, &
             sqliteff_bind_int, &
             sqliteff_bind_text, &
+            sqliteff_clear_bindings, &
             sqliteff_close, &
             sqliteff_column_double, &
             sqliteff_column_int, &
@@ -35,6 +35,7 @@ module sqliteff
             sqliteff_finalize, &
             sqliteff_open, &
             sqliteff_prepare, &
+            sqliteff_reset, &
             sqliteff_step
 contains
     function sqliteff_bind_double(statement, col, val) result(status)
@@ -110,6 +111,24 @@ contains
 
         status = csqlite3_bind_text(statement%handle, col, fStringToC(val), len(val) + 1)
     end function sqliteff_bind_text
+
+    function sqliteff_clear_bindings(statement) result(status)
+        type(SqliteStatement_t), intent(inout) :: statement
+        integer :: status
+
+        interface
+            function csqlite3_clear_bindings( &
+                    handle) &
+                    result(status) &
+                    bind(C, name = "csqlite3_clear_bindings")
+                import c_int, c_ptr
+                type(c_ptr), intent(inout) :: handle
+                integer(kind=c_int) :: status
+            end function csqlite3_clear_bindings
+        end interface
+
+        status = csqlite3_clear_bindings(statement%handle)
+    end function sqliteff_clear_bindings
 
     function sqliteff_close(connection) result(status)
         type(SqliteDatabase_t), intent(inout) :: connection
@@ -297,6 +316,22 @@ contains
         status = csqlite3_prepare(connection%handle, fStringToC(sql), len(sql) + 1, statement%handle, pzTail, MAX_REMAINING_LENGTH)
         remaining = cStringToF(pzTail)
     end function sqliteff_prepare
+
+    function sqliteff_reset(statement) result(status)
+        type(SqliteStatement_t), intent(inout) :: statement
+        integer :: status
+
+        interface
+            function csqlite3_reset( &
+                    handle) result(status) bind(C, name = "csqlite3_reset")
+                import c_int, c_ptr
+                type(c_ptr), intent(inout) :: handle
+                integer(kind=c_int) :: status
+            end function csqlite3_reset
+        end interface
+
+        status = csqlite3_reset(statement%handle)
+    end function sqliteff_reset
 
     function sqliteff_step(statement) result(status)
         type(SqliteStatement_t), intent(inout) :: statement

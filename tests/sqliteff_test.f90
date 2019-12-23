@@ -6,6 +6,7 @@ module sqliteff_test
             sqliteff_bind_double, &
             sqliteff_bind_int, &
             sqliteff_bind_text, &
+            sqliteff_clear_bindings, &
             sqliteff_close, &
             sqliteff_column_double, &
             sqliteff_column_int, &
@@ -14,6 +15,7 @@ module sqliteff_test
             sqliteff_finalize, &
             sqliteff_open, &
             sqliteff_prepare, &
+            sqliteff_reset, &
             sqliteff_step, &
             SQLITE_DONE, &
             SQLITE_OK, &
@@ -28,7 +30,7 @@ contains
     function test_sqliteff() result(tests)
         type(TestItem_t) :: tests
 
-        type(TestItem_t) :: individual_tests(5)
+        type(TestItem_t) :: individual_tests(7)
 
         individual_tests(1) = it( &
                 "can open and close a database connection", checkOpenAndClose)
@@ -41,6 +43,10 @@ contains
                 "can use bind to insert values", checkInsertWithBind)
         individual_tests(5) = it( &
                 "can get data back out", checkExtract)
+        individual_tests(6) = it( &
+                "can reset a statement", checkReset)
+        individual_tests(7) = it( &
+                "can clear the bindings from a statement", checkClearBindings)
         tests = describe("sqliteff", individual_tests)
     end function test_sqliteff
 
@@ -181,4 +187,78 @@ contains
             status = sqliteff_close(connection)
         end if
     end function checkExtract
+
+    function checkReset() result(result_)
+        type(Result_t) :: result_
+
+        type(SqliteDatabase_t) :: connection
+        type(VARYING_STRING) :: errmsg
+        type(VARYING_STRING) :: remaining
+        type(SqliteStatement_t) :: statement
+        integer :: status
+
+        status = sqliteff_open(":memory:", connection)
+        status = sqliteff_exec( &
+                connection, &
+                "CREATE TABLE example (the_integer INTEGER, the_double REAL, the_text TEXT);", &
+                errmsg)
+        status = sqliteff_exec( &
+                connection, &
+                'INSERT INTO example (the_integer, the_double, the_text) VALUES (2, 3.0, "Hello");', &
+                errmsg)
+        status = sqliteff_prepare( &
+                connection, &
+                "SELECT the_integer, the_double, the_text FROM example;", &
+                statement, &
+                remaining)
+        status = sqliteff_step(statement)
+        result_ = assertEquals(SQLITE_ROW, status, "step")
+        if (result_%passed()) then
+            status = sqliteff_reset(statement)
+            result_ = assertEquals(SQLITE_OK, status, "reset")
+            status = sqliteff_finalize(statement)
+            status = sqliteff_close(connection)
+        end if
+    end function checkReset
+
+    function checkClearBindings() result(result_)
+        type(Result_t) :: result_
+
+        type(SqliteDatabase_t) :: connection
+        type(VARYING_STRING) :: errmsg
+        type(VARYING_STRING) :: remaining
+        type(SqliteStatement_t) :: statement
+        integer :: status
+
+        status = sqliteff_open(":memory:", connection)
+        status = sqliteff_exec( &
+                connection, &
+                "CREATE TABLE example (the_integer INTEGER, the_double REAL, the_text TEXT);", &
+                errmsg)
+        status = sqliteff_prepare( &
+                connection, &
+                "INSERT INTO example (the_integer, the_double, the_text) VALUES (?, ?, ?);", &
+                statement, &
+                remaining)
+        result_ = assertEquals(SQLITE_OK, status, "prepare")
+        if (result_%passed()) then
+            status = sqliteff_bind_int(statement, 1, 2)
+            result_ = assertEquals(SQLITE_OK, status, "bind_int")
+            if (result_%passed()) then
+                status = sqliteff_bind_double(statement, 2, 3.0d0)
+                result_ = assertEquals(SQLITE_OK, status, "bind_double")
+                if (result_%passed()) then
+                    status = sqliteff_bind_text(statement, 3, "something")
+                    result_ = assertEquals(SQLITE_OK, status, "bind_text")
+                    if (result_%passed()) then
+                        status = sqliteff_step(statement)
+                        status = sqliteff_clear_bindings(statement)
+                        result_ = assertEquals(SQLITE_OK, status, "clear_bindings")
+                        status = sqliteff_finalize(statement)
+                        status = sqliteff_close(connection)
+                    end if
+                end if
+            end if
+        end if
+    end function checkClearBindings
 end module sqliteff_test

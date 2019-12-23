@@ -1,5 +1,7 @@
 /*
 MODULE csqlite3
+
+USE sqlite3
 */
 
 #include "sqlite3.h"
@@ -17,6 +19,10 @@ int csqlite3_bind_int(sqlite3_stmt **stmt, int col, int val) {
 
 int csqlite3_bind_text(sqlite3_stmt **stmt, int col, char *string, int nByte) {
   return sqlite3_bind_text(*stmt, col, string, nByte, SQLITE_TRANSIENT);
+}
+
+int csqlite3_clear_bindings(sqlite3_stmt **stmt) {
+  return sqlite3_clear_bindings(*stmt);
 }
 
 int csqlite3_close(sqlite3 **db) { return sqlite3_close(*db); }
@@ -62,5 +68,7 @@ int csqlite3_prepare(sqlite3 **db, const char *zSql, int nByte,
   strncpy(pzTail, remaining, max_len);
   return status;
 }
+
+int csqlite3_reset(sqlite3_stmt **stmt) { return sqlite3_reset(*stmt); }
 
 int csqlite3_step(sqlite3_stmt **stmt) { return sqlite3_step(*stmt); }
