@@ -60,6 +60,10 @@ int csqlite3_exec(sqlite3 **db, char *command, char *errmsg, int max_len) {
 
 int csqlite3_finalize(sqlite3_stmt **stmt) { return sqlite3_finalize(*stmt); }
 
+int csqlite3_last_insert_rowid(sqlite3 **db) {
+  return sqlite3_last_insert_rowid(*db);
+}
+
 int csqlite3_open(char *filename, sqlite3 **db) {
   return sqlite3_open(filename, db);
 }

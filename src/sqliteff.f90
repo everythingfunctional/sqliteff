@@ -34,6 +34,7 @@ module sqliteff
             sqliteff_column_text, &
             sqliteff_exec, &
             sqliteff_finalize, &
+            sqliteff_last_insert_rowid, &
             sqliteff_open, &
             sqliteff_prepare, &
             sqliteff_reset, &
@@ -279,6 +280,21 @@ contains
 
         status = csqlite3_finalize(statement%handle)
     end function sqliteff_finalize
+
+    function sqliteff_last_insert_rowid(connection) result(row_id)
+        type(SqliteDatabase_t), intent(inout) :: connection
+        integer :: row_id
+
+        interface
+            function csqlite3_last_insert_rowid(handle) result(row_id) bind(C, name = "csqlite3_last_insert_rowid")
+                import c_int, c_ptr
+                type(c_ptr), intent(inout) :: handle
+                integer(kind=c_int) :: row_id
+            end function csqlite3_last_insert_rowid
+        end interface
+
+        row_id = csqlite3_last_insert_rowid(connection%handle)
+    end function sqliteff_last_insert_rowid
 
     function sqliteff_open(filename, connection) result(status)
         character(len=*), intent(in) :: filename

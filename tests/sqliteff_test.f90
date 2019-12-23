@@ -14,6 +14,7 @@ module sqliteff_test
             sqliteff_column_text, &
             sqliteff_exec, &
             sqliteff_finalize, &
+            sqliteff_last_insert_rowid, &
             sqliteff_open, &
             sqliteff_prepare, &
             sqliteff_reset, &
@@ -31,7 +32,7 @@ contains
     function test_sqliteff() result(tests)
         type(TestItem_t) :: tests
 
-        type(TestItem_t) :: individual_tests(8)
+        type(TestItem_t) :: individual_tests(9)
 
         individual_tests(1) = it( &
                 "can open and close a database connection", checkOpenAndClose)
@@ -50,6 +51,8 @@ contains
                 "can clear the bindings from a statement", checkClearBindings)
         individual_tests(8) = it( &
                 "can tell how many columns in a result", checkColumnCount)
+        individual_tests(9) = it( &
+                "can get the id of the last inserted row", checkLastInsertRowid)
         tests = describe("sqliteff", individual_tests)
     end function test_sqliteff
 
@@ -296,4 +299,38 @@ contains
             status = sqliteff_close(connection)
         end if
     end function checkColumnCount
+
+    function checkLastInsertRowid() result(result_)
+        type(Result_t) :: result_
+
+        type(SqliteDatabase_t) :: connection
+        type(VARYING_STRING) :: errmsg
+        type(VARYING_STRING) :: remaining
+        integer :: query_row_id
+        integer :: row_id
+        type(SqliteStatement_t) :: statement
+        integer :: status
+
+        status = sqliteff_open(":memory:", connection)
+
+        status = sqliteff_exec( &
+                connection, &
+                "CREATE TABLE example (identifier INTEGER PRIMARY KEY ASC, dummy TEXT);", &
+                errmsg)
+        status = sqliteff_exec( &
+                connection, &
+                'INSERT INTO example (dummy) VALUES ("Hello");', &
+                errmsg)
+        row_id = sqliteff_last_insert_rowid(connection)
+        status = sqliteff_prepare( &
+                connection, &
+                "SELECT identifier FROM example;", &
+                statement, &
+                remaining)
+        status = sqliteff_step(statement)
+        query_row_id = sqliteff_column_int(statement, 0)
+        result_ = assertEquals(query_row_id, row_id)
+        status = sqliteff_finalize(statement)
+        status = sqliteff_close(connection)
+    end function checkLastInsertRowid
 end module sqliteff_test
