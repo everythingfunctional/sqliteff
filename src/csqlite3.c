@@ -39,6 +39,10 @@ int csqlite3_column_int(sqlite3_stmt **stmt, int col) {
   return sqlite3_column_int(*stmt, col);
 }
 
+int csqlite3_column_type(sqlite3_stmt** stmt, int col) {
+    return sqlite3_column_type(*stmt, col);
+}
+
 void csqlite3_column_text(sqlite3_stmt **stmt, int col, char *text,
                           int max_len) {
   const char *string;

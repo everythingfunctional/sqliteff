@@ -12,6 +12,7 @@ module sqliteff_test
             sqliteff_column_double, &
             sqliteff_column_int, &
             sqliteff_column_text, &
+            sqliteff_column_type, &
             sqliteff_exec, &
             sqliteff_finalize, &
             sqliteff_last_insert_rowid, &
@@ -21,7 +22,12 @@ module sqliteff_test
             sqliteff_step, &
             SQLITE_DONE, &
             SQLITE_OK, &
-            SQLITE_ROW
+            SQLITE_ROW, &
+            SQLITE_INTEGER, &
+            SQLITE_FLOAT, &
+            SQLITE3_TEXT, &
+            SQLITE_BLOB, &
+            SQLITE_NULL
     use Vegetables_m, only: Result_t, TestItem_t, assertEquals, describe, it
 
     implicit none
@@ -32,7 +38,7 @@ contains
     function test_sqliteff() result(tests)
         type(TestItem_t) :: tests
 
-        type(TestItem_t) :: individual_tests(9)
+        type(TestItem_t) :: individual_tests(10)
 
         individual_tests(1) = it( &
                 "can open and close a database connection", checkOpenAndClose)
@@ -53,6 +59,8 @@ contains
                 "can tell how many columns in a result", checkColumnCount)
         individual_tests(9) = it( &
                 "can get the id of the last inserted row", checkLastInsertRowid)
+        individual_tests(10) = it( &
+                "can check column types", checkColumnType)
         tests = describe("sqliteff", individual_tests)
     end function test_sqliteff
 
@@ -333,4 +341,54 @@ contains
         status = sqliteff_finalize(statement)
         status = sqliteff_close(connection)
     end function checkLastInsertRowid
+    
+    function checkColumnType() result(result_)
+        type(Result_t) :: result_
+        
+        type(SqliteDatabase_t) :: connection
+        type(VARYING_STRING) :: errmsg
+        type(VARYING_STRING) :: remaining
+        integer :: column_type_int, &
+                   column_type_float, &
+                   column_type_text, &
+                   column_type_blob, &
+                   column_type_null
+        type(SqliteStatement_t) :: statement
+        integer :: status
+
+        status = sqliteff_open(":memory:", connection)
+
+        status = sqliteff_exec( &
+                connection, &
+                "CREATE TABLE example (the_integer INTEGER, the_double REAL, the_text TEXT, the_blob BLOB, the_null REAL);", &
+                errmsg)
+        status = sqliteff_exec( &
+                connection, &
+                "INSERT INTO example (the_integer, the_double, the_text, the_blob, the_null) " & 
+                // "VALUES (1, 1.0, 'Hello', X'53514C697465', NULL);", &
+                errmsg)
+        
+        status = sqliteff_prepare( &
+                connection, &
+                "SELECT the_integer, the_double, the_text, the_blob, the_null FROM example;", &
+                statement, &
+                remaining)
+        status = sqliteff_step(statement)
+        
+        column_type_int = sqliteff_column_type(statement, 0)
+        column_type_float = sqliteff_column_type(statement, 1)
+        column_type_text = sqliteff_column_type(statement, 2)
+        column_type_blob = sqliteff_column_type(statement, 3)
+        column_type_null = sqliteff_column_type(statement, 4)
+        
+        result_ = &
+                assertEquals(column_type_int, SQLITE_INTEGER) &
+                .and. assertEquals(column_type_float, SQLITE_FLOAT) &
+                .and. assertEquals(column_type_text, SQLITE3_TEXT) &
+                .and. assertEquals(column_type_blob, SQLITE_BLOB) &
+                .and. assertEquals(column_type_null, SQLITE_NULL)
+                
+        status = sqliteff_finalize(statement)
+        status = sqliteff_close(connection)
+    end function checkColumnType
 end module sqliteff_test

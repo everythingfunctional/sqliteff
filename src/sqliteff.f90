@@ -41,7 +41,13 @@ module sqliteff
     integer, parameter, public :: SQLITE_MISUSE = 21
     integer, parameter, public :: SQLITE_ROW = 100
     integer, parameter, public :: SQLITE_DONE = 101
-
+    
+    integer, parameter, public :: SQLITE_INTEGER = 1
+    integer, parameter, public :: SQLITE_FLOAT = 2
+    integer, parameter, public :: SQLITE3_TEXT = 3
+    integer, parameter, public :: SQLITE_BLOB = 4
+    integer, parameter, public :: SQLITE_NULL = 5
+    
     public :: &
             sqliteff_bind_double, &
             sqliteff_bind_int, &
@@ -52,6 +58,7 @@ module sqliteff
             sqliteff_column_double, &
             sqliteff_column_int, &
             sqliteff_column_text, &
+            sqliteff_column_type, &
             sqliteff_exec, &
             sqliteff_finalize, &
             sqliteff_last_insert_rowid, &
@@ -263,6 +270,27 @@ contains
         call csqlite3_column_text(statement%handle, col, text, MAX_STRING_LENGTH)
         val = cStringToF(text)
     end function sqliteff_column_text
+
+    function sqliteff_column_type(statement, col) result(val)
+        type(SqliteStatement_t), intent(inout) :: statement
+        integer, intent(in) :: col
+        integer :: val
+
+        interface
+            function csqlite3_column_type( &
+                    handle, &
+                    col) &
+                    result(val) &
+                    bind(C, name = "csqlite3_column_type")
+                import c_int, c_ptr
+                type(c_ptr), intent(inout) :: handle
+                integer(kind=c_int), value, intent(in) :: col
+                integer(kind=c_int) :: val
+            end function csqlite3_column_type
+        end interface
+
+        val = csqlite3_column_type(statement%handle, col)
+    end function sqliteff_column_type
 
     function sqliteff_execC(connection, command, errmsg) result(status)
         type(SqliteDatabase_t), intent(inout) :: connection
