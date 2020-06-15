@@ -1,5 +1,4 @@
 module sqliteff
-!   USE csqlite3
     use iso_c_binding, only: c_char, c_int, c_double, c_ptr
     use iso_varying_string, only: VARYING_STRING, assignment(=), char
 
@@ -41,13 +40,13 @@ module sqliteff
     integer, parameter, public :: SQLITE_MISUSE = 21
     integer, parameter, public :: SQLITE_ROW = 100
     integer, parameter, public :: SQLITE_DONE = 101
-    
+
     integer, parameter, public :: SQLITE_INTEGER = 1
     integer, parameter, public :: SQLITE_FLOAT = 2
     integer, parameter, public :: SQLITE3_TEXT = 3
     integer, parameter, public :: SQLITE_BLOB = 4
     integer, parameter, public :: SQLITE_NULL = 5
-    
+
     public :: &
             sqliteff_bind_double, &
             sqliteff_bind_int, &
