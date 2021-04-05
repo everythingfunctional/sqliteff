@@ -1,7 +1,7 @@
 SQLite for Fortran
 ========================
 
-[![pipeline status](https://gitlab.com/everythingfunctional/sqliteff/badges/master/pipeline.svg)](https://gitlab.com/everythingfunctional/sqliteff/commits/master)
+[![pipeline status](https://gitlab.com/everythingfunctional/sqliteff/badges/main/pipeline.svg)](https://gitlab.com/everythingfunctional/sqliteff/commits/main)
 
 A thin wrapper around the SQLite library. The `sqliteff_*` functions are
 effectively identical to the `sqlite3_*` functions that would be called
