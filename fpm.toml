@@ -6,11 +6,7 @@ maintainer = "everythingfunctional@protonmail.com"
 copyright = "2020 Brad Richardson"
 
 [dependencies]
-iso_varying_string = { git = "https://gitlab.com/everythingfunctional/iso_varying_string.git", tag = "v1.0.0" }
-
-[library]
-source-dir = "src"
-build-script = "Makefile"
+iso_varying_string = { git = "https://gitlab.com/everythingfunctional/iso_varying_string.git", tag = "v3.0.2" }
 
 [dev-dependencies]
-vegetables = { git = "https://gitlab.com/everythingfunctional/vegetables.git", tag = "v5.0.0" }
+veggies = { git = "https://gitlab.com/everythingfunctional/veggies.git", tag = "v1.0.2" }

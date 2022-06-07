@@ -28,7 +28,7 @@ module sqliteff_test
             SQLITE3_TEXT, &
             SQLITE_BLOB, &
             SQLITE_NULL
-    use Vegetables_m, only: Result_t, TestItem_t, assertEquals, describe, it
+    use veggies, only: result_t, test_item_t, assert_equals, describe, it
 
     implicit none
     private
@@ -36,9 +36,9 @@ module sqliteff_test
     public :: test_sqliteff
 contains
     function test_sqliteff() result(tests)
-        type(TestItem_t) :: tests
+        type(test_item_t) :: tests
 
-        type(TestItem_t) :: individual_tests(10)
+        type(test_item_t) :: individual_tests(10)
 
         individual_tests(1) = it( &
                 "can open and close a database connection", checkOpenAndClose)
@@ -72,11 +72,11 @@ contains
 
         status = sqliteff_open(var_str(":memory:"), connection)
 
-        result_ = assertEquals(SQLITE_OK, status, "opened")
+        result_ = assert_equals(SQLITE_OK, status, "opened")
 
         if (result_%passed()) then
             status = sqliteff_close(connection)
-            result_ = assertEquals(SQLITE_OK, status, "closed")
+            result_ = assert_equals(SQLITE_OK, status, "closed")
         end if
     end function checkOpenAndClose
 
@@ -93,7 +93,7 @@ contains
                 connection, &
                 var_str("CREATE TABLE example (identifier INTEGER PRIMARY KEY ASC, dummy TEXT);"), &
                 errmsg)
-        result_ = assertEquals(SQLITE_OK, status, errmsg)
+        result_ = assert_equals(SQLITE_OK, status, errmsg)
         status = sqliteff_close(connection)
     end function checkExec
 
@@ -112,10 +112,10 @@ contains
                 var_str("CREATE TABLE example (identifier INTEGER PRIMARY KEY ASC, dummy TEXT);"), &
                 statement, &
                 remaining)
-        result_ = assertEquals(SQLITE_OK, status, "prepared")
+        result_ = assert_equals(SQLITE_OK, status, "prepared")
         if (result_%passed()) then
             status = sqliteff_step(statement)
-            result_ = assertEquals(SQLITE_DONE, status, "stepped")
+            result_ = assert_equals(SQLITE_DONE, status, "stepped")
             status = sqliteff_finalize(statement)
             status = sqliteff_close(connection)
         end if
@@ -140,19 +140,19 @@ contains
                 "INSERT INTO example (the_integer, the_double, the_text) VALUES (?, ?, ?);", &
                 statement, &
                 remaining)
-        result_ = assertEquals(SQLITE_OK, status, "prepare")
+        result_ = assert_equals(SQLITE_OK, status, "prepare")
         if (result_%passed()) then
             status = sqliteff_bind_int(statement, 1, 2)
-            result_ = assertEquals(SQLITE_OK, status, "bind_int")
+            result_ = assert_equals(SQLITE_OK, status, "bind_int")
             if (result_%passed()) then
                 status = sqliteff_bind_double(statement, 2, 3.0d0)
-                result_ = assertEquals(SQLITE_OK, status, "bind_double")
+                result_ = assert_equals(SQLITE_OK, status, "bind_double")
                 if (result_%passed()) then
                     status = sqliteff_bind_text(statement, 3, var_str("something"))
-                    result_ = assertEquals(SQLITE_OK, status, "bind_text")
+                    result_ = assert_equals(SQLITE_OK, status, "bind_text")
                     if (result_%passed()) then
                         status = sqliteff_step(statement)
-                        result_ = assertEquals(SQLITE_DONE, status, "step")
+                        result_ = assert_equals(SQLITE_DONE, status, "step")
                         status = sqliteff_finalize(statement)
                         status = sqliteff_close(connection)
                     end if
@@ -188,15 +188,15 @@ contains
                 statement, &
                 remaining)
         status = sqliteff_step(statement)
-        result_ = assertEquals(SQLITE_ROW, status, "step")
+        result_ = assert_equals(SQLITE_ROW, status, "step")
         if (result_%passed()) then
             the_integer = sqliteff_column_int(statement, 0)
             the_double = sqliteff_column_double(statement, 1)
             the_text = sqliteff_column_text(statement, 2)
             result_ = &
-                    assertEquals(2, the_integer) &
-                    .and.assertEquals(3.0d0, the_double) &
-                    .and.assertEquals("Hello", the_text)
+                    assert_equals(2, the_integer) &
+                    .and.assert_equals(3.0d0, the_double) &
+                    .and.assert_equals("Hello", the_text)
             status = sqliteff_finalize(statement)
             status = sqliteff_close(connection)
         end if
@@ -226,10 +226,10 @@ contains
                 statement, &
                 remaining)
         status = sqliteff_step(statement)
-        result_ = assertEquals(SQLITE_ROW, status, "step")
+        result_ = assert_equals(SQLITE_ROW, status, "step")
         if (result_%passed()) then
             status = sqliteff_reset(statement)
-            result_ = assertEquals(SQLITE_OK, status, "reset")
+            result_ = assert_equals(SQLITE_OK, status, "reset")
             status = sqliteff_finalize(statement)
             status = sqliteff_close(connection)
         end if
@@ -254,20 +254,20 @@ contains
                 "INSERT INTO example (the_integer, the_double, the_text) VALUES (?, ?, ?);", &
                 statement, &
                 remaining)
-        result_ = assertEquals(SQLITE_OK, status, "prepare")
+        result_ = assert_equals(SQLITE_OK, status, "prepare")
         if (result_%passed()) then
             status = sqliteff_bind_int(statement, 1, 2)
-            result_ = assertEquals(SQLITE_OK, status, "bind_int")
+            result_ = assert_equals(SQLITE_OK, status, "bind_int")
             if (result_%passed()) then
                 status = sqliteff_bind_double(statement, 2, 3.0d0)
-                result_ = assertEquals(SQLITE_OK, status, "bind_double")
+                result_ = assert_equals(SQLITE_OK, status, "bind_double")
                 if (result_%passed()) then
                     status = sqliteff_bind_text(statement, 3, "something")
-                    result_ = assertEquals(SQLITE_OK, status, "bind_text")
+                    result_ = assert_equals(SQLITE_OK, status, "bind_text")
                     if (result_%passed()) then
                         status = sqliteff_step(statement)
                         status = sqliteff_clear_bindings(statement)
-                        result_ = assertEquals(SQLITE_OK, status, "clear_bindings")
+                        result_ = assert_equals(SQLITE_OK, status, "clear_bindings")
                         status = sqliteff_finalize(statement)
                         status = sqliteff_close(connection)
                     end if
@@ -300,9 +300,9 @@ contains
                 statement, &
                 remaining)
         status = sqliteff_step(statement)
-        result_ = assertEquals(SQLITE_ROW, status, "step")
+        result_ = assert_equals(SQLITE_ROW, status, "step")
         if (result_%passed()) then
-            result_ = assertEquals(3, sqliteff_column_count(statement))
+            result_ = assert_equals(3, sqliteff_column_count(statement))
             status = sqliteff_finalize(statement)
             status = sqliteff_close(connection)
         end if
@@ -337,14 +337,14 @@ contains
                 remaining)
         status = sqliteff_step(statement)
         query_row_id = sqliteff_column_int(statement, 0)
-        result_ = assertEquals(query_row_id, row_id)
+        result_ = assert_equals(query_row_id, row_id)
         status = sqliteff_finalize(statement)
         status = sqliteff_close(connection)
     end function checkLastInsertRowid
-    
+
     function checkColumnType() result(result_)
         type(Result_t) :: result_
-        
+
         type(SqliteDatabase_t) :: connection
         type(VARYING_STRING) :: errmsg
         type(VARYING_STRING) :: remaining
@@ -364,30 +364,30 @@ contains
                 errmsg)
         status = sqliteff_exec( &
                 connection, &
-                "INSERT INTO example (the_integer, the_double, the_text, the_blob, the_null) " & 
+                "INSERT INTO example (the_integer, the_double, the_text, the_blob, the_null) " &
                 // "VALUES (1, 1.0, 'Hello', X'53514C697465', NULL);", &
                 errmsg)
-        
+
         status = sqliteff_prepare( &
                 connection, &
                 "SELECT the_integer, the_double, the_text, the_blob, the_null FROM example;", &
                 statement, &
                 remaining)
         status = sqliteff_step(statement)
-        
+
         column_type_int = sqliteff_column_type(statement, 0)
         column_type_float = sqliteff_column_type(statement, 1)
         column_type_text = sqliteff_column_type(statement, 2)
         column_type_blob = sqliteff_column_type(statement, 3)
         column_type_null = sqliteff_column_type(statement, 4)
-        
+
         result_ = &
-                assertEquals(column_type_int, SQLITE_INTEGER) &
-                .and. assertEquals(column_type_float, SQLITE_FLOAT) &
-                .and. assertEquals(column_type_text, SQLITE3_TEXT) &
-                .and. assertEquals(column_type_blob, SQLITE_BLOB) &
-                .and. assertEquals(column_type_null, SQLITE_NULL)
-                
+                assert_equals(column_type_int, SQLITE_INTEGER) &
+                .and. assert_equals(column_type_float, SQLITE_FLOAT) &
+                .and. assert_equals(column_type_text, SQLITE3_TEXT) &
+                .and. assert_equals(column_type_blob, SQLITE_BLOB) &
+                .and. assert_equals(column_type_null, SQLITE_NULL)
+
         status = sqliteff_finalize(statement)
         status = sqliteff_close(connection)
     end function checkColumnType
