@@ -1,5 +1,5 @@
 module sqliteff
-    use iso_c_binding, only: c_char, c_int, c_double, c_ptr
+    use iso_c_binding, only: c_char, c_double, c_int, c_null_char, c_ptr
     use iso_varying_string, only: VARYING_STRING, assignment(=), char
 
     implicit none
@@ -137,7 +137,7 @@ contains
             end function csqlite3_bind_text
         end interface
 
-        status = csqlite3_bind_text(statement%handle, col, fStringToC(val), len(val) + 1)
+        status = csqlite3_bind_text(statement%handle, col, f_string_to_c(val), len(val) + 1)
     end function sqliteff_bind_textC
 
     function sqliteff_bind_textS(statement, col, val) result(status)
@@ -264,10 +264,10 @@ contains
         end interface
 
         integer, parameter :: MAX_STRING_LENGTH = 1000
-        character(len=MAX_STRING_LENGTH, kind=c_char) :: text
+        character(len=1, kind=c_char) :: text(MAX_STRING_LENGTH)
 
         call csqlite3_column_text(statement%handle, col, text, MAX_STRING_LENGTH)
-        val = cStringToF(text)
+        val = c_string_to_f(text)
     end function sqliteff_column_text
 
     function sqliteff_column_type(statement, col) result(val)
@@ -315,10 +315,10 @@ contains
         end interface
 
         integer, parameter :: MAX_MESSAGE_LENGTH = 1000
-        character(len=MAX_MESSAGE_LENGTH, kind=c_char) :: message
+        character(len=1, kind=c_char) :: message(MAX_MESSAGE_LENGTH)
 
-        status = csqlite3_exec(connection%handle, fStringToC(command), message, MAX_MESSAGE_LENGTH)
-        errmsg = cStringToF(message)
+        status = csqlite3_exec(connection%handle, f_string_to_c(command), message, MAX_MESSAGE_LENGTH)
+        errmsg = c_string_to_f(message)
     end function sqliteff_execC
 
     function sqliteff_execS(connection, command, errmsg) result(status)
@@ -379,7 +379,7 @@ contains
             end function csqlite3_open
         end interface
 
-        status = csqlite3_open(fStringToC(filename), connection%handle)
+        status = csqlite3_open(f_string_to_c(filename), connection%handle)
     end function sqliteff_openC
 
     function sqliteff_openS(filename, connection) result(status)
@@ -419,10 +419,16 @@ contains
         end interface
 
         integer, parameter :: MAX_REMAINING_LENGTH = 1000
-        character(len=MAX_REMAINING_LENGTH, kind=c_char) :: pzTail
+        character(len=1, kind=c_char) :: pzTail(MAX_REMAINING_LENGTH)
 
-        status = csqlite3_prepare(connection%handle, fStringToC(sql), len(sql) + 1, statement%handle, pzTail, MAX_REMAINING_LENGTH)
-        remaining = cStringToF(pzTail)
+        status = csqlite3_prepare( &
+                connection%handle, &
+                f_string_to_c(sql), &
+                len(sql) + 1, &
+                statement%handle, &
+                pzTail, &
+                MAX_REMAINING_LENGTH)
+        remaining = c_string_to_f(pzTail)
     end function sqliteff_prepareC
 
     function sqliteff_prepareS(connection, sql, statement, remaining) result(status)
@@ -467,24 +473,45 @@ contains
         status = csqlite3_step(statement%handle)
     end function sqliteff_step
 
-    pure function fStringToC(f_string) result(c_string)
+    pure function f_string_to_c(f_string) result(c_string)
         character(len=*), intent(in) :: f_string
-        character(len=len(f_string) + 1) :: c_string
+        character(len=1, kind=c_char) :: c_string(len(f_string) + 1)
 
-        c_string = f_string // char(0)
-    end function fStringToC
+        integer :: i
 
-    pure function cStringToF(c_string) result(f_string)
-        character(len=*), intent(in) :: c_string
-        type(VARYING_STRING) :: f_string
+        do concurrent (i = 1:len(f_string))
+            c_string(i) = f_string(i:i)
+        end do
+        c_string(len(f_string)+1) = c_null_char
+    end function
 
+    pure function c_string_to_f(c_string) result(f_string)
+        character(len=1, kind=c_char), intent(in) :: c_string(:)
+        character(len=:), allocatable :: f_string
+
+        integer :: i
+        integer :: string_length
         integer :: terminator_position
 
-        terminator_position = index(c_string, char(0))
+        terminator_position = 0
+        do i = 1, size(c_string)
+            if (c_string(i) == c_null_char) then
+                terminator_position = i
+                exit
+            end if
+        end do
         if (terminator_position == 0) then
-            f_string = c_string
+            string_length = size(c_string)
+            allocate(character(len=string_length) :: f_string)
+            do concurrent (i = 1:string_length)
+                f_string(i:i) = c_string(i)
+            end do
         else
-            f_string = c_string(1:terminator_position - 1)
+            string_length = terminator_position - 1
+            allocate(character(len=string_length) :: f_string)
+            do concurrent (i = 1:string_length)
+                f_string(i:i) = c_string(i)
+            end do
         end if
-    end function cStringToF
+    end function
 end module sqliteff
