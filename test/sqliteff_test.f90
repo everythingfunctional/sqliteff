@@ -38,7 +38,7 @@ contains
     function test_sqliteff() result(tests)
         type(test_item_t) :: tests
 
-        type(test_item_t) :: individual_tests(10)
+        type(test_item_t) :: individual_tests(11)
 
         individual_tests(1) = it( &
                 "can open and close a database connection", checkOpenAndClose)
@@ -61,6 +61,8 @@ contains
                 "can get the id of the last inserted row", checkLastInsertRowid)
         individual_tests(10) = it( &
                 "can check column types", checkColumnType)
+        individual_tests(11) = it( &
+                "can handle NULL values", checkNullHandling)
         tests = describe("sqliteff", individual_tests)
     end function test_sqliteff
 
@@ -391,4 +393,49 @@ contains
         status = sqliteff_finalize(statement)
         status = sqliteff_close(connection)
     end function checkColumnType
+    
+    function checkNullHandling() result(result_)
+        type(Result_t) :: result_
+
+        type(SqliteDatabase_t) :: connection
+        type(VARYING_STRING) :: errmsg
+        type(VARYING_STRING) :: remaining
+        integer :: the_integer
+        double precision :: the_double
+        type(VARYING_STRING) :: the_text
+        type(SqliteStatement_t) :: statement
+        integer :: status
+
+        status = sqliteff_open(":memory:", connection)
+
+        status = sqliteff_exec( &
+                connection, &
+                "CREATE TABLE example (the_integer INTEGER, the_double REAL, the_text TEXT);", &
+                errmsg)
+        status = sqliteff_exec( &
+                connection, &
+                "INSERT INTO example (the_integer, the_double, the_text) " &
+                // "VALUES (NULL, NULL, NULL);", &
+                errmsg)
+
+        status = sqliteff_prepare( &
+                connection, &
+                "SELECT the_integer, the_double, the_text FROM example;", &
+                statement, &
+                remaining)
+        status = sqliteff_step(statement)
+
+        the_integer = sqliteff_column_int(statement, 0)
+        the_double = sqliteff_column_double(statement, 1)
+        the_text = sqliteff_column_text(statement, 2)
+
+        result_ = &
+                assert_equals(the_integer, 0) &
+                .and. assert_equals(the_double, 0.0D0) &
+                .and. assert_equals(the_text, "")
+
+        status = sqliteff_finalize(statement)
+        status = sqliteff_close(connection)
+    end function checkNullHandling
+    
 end module sqliteff_test
