@@ -41,6 +41,9 @@ void csqlite3_column_text(sqlite3_stmt **stmt, int col, char *text,
                           int max_len) {
   const char *string;
   string = sqlite3_column_text(*stmt, col);
+  if (string == NULL) {
+    string = "\0";
+  }
   strncpy(text, string, max_len);
 }
 
