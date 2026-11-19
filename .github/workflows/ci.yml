@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true  # equivalent of GIT_SUBMODULE_STRATEGY: normal
+
+      - name: Set up gfortran
+        uses: fortran-lang/setup-fortran@v1
+        with:
+          compiler: gcc
+          version: 16
+
+      - name: Set up fpm
+        uses: fortran-lang/setup-fpm@v7
+        with:
+          fpm-version: v0.10.1
+
+      - name: Run tests
+        run: fpm test
