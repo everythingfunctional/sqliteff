@@ -137,7 +137,7 @@ contains
             end function csqlite3_bind_text
         end interface
 
-        status = csqlite3_bind_text(statement%handle, col, f_string_to_c(val), len(val) + 1)
+        status = csqlite3_bind_text(statement%handle, col, f_string_to_c(val), len(val))
     end function sqliteff_bind_textC
 
     function sqliteff_bind_textS(statement, col, val) result(status)
